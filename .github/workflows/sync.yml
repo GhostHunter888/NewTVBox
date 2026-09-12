@@ -1,0 +1,56 @@
+name: Sync NewTVBox Daily
+
+on:
+  schedule:
+    # 北京时间每天凌晨5点
+    - cron: "0 21 * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Sync NewTVBox
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream https://github.com/PizazzGY/NewTVBox.git || true
+
+          git fetch upstream
+
+          echo "Backup workflow files"
+
+          mkdir -p /tmp/workflow_backup
+
+          if [ -d ".github/workflows" ]; then
+            cp -r .github/workflows /tmp/workflow_backup/
+          fi
+
+          echo "Reset to upstream"
+
+          git reset --hard upstream/main
+
+          echo "Restore workflow files"
+
+          mkdir -p .github
+
+          if [ -d "/tmp/workflow_backup/workflows" ]; then
+            cp -r /tmp/workflow_backup/workflows .github/
+          fi
+
+          git add .
+
+          git commit -m "Sync NewTVBox upstream" || echo "No changes"
+
+          git push origin main --force
